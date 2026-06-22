@@ -1,0 +1,37 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Сгенерировать платформенную папку android (если её ещё нет в репозитории)
+        run: flutter create --platforms=android .
+
+      - name: Добавить разрешения для Wi-Fi и сети
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest /a\
+              <uses-permission android:name="android.permission.INTERNET"/>\
+              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>\
+              <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>' "$MANIFEST"
+          cat "$MANIFEST"
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lan-chat-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
